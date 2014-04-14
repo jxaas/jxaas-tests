@@ -81,9 +81,9 @@ assert len(metrics) > 0
 log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
 juju_set_property(service_name, 'slow-query-time', '0.1')
 
-time.sleep(1)
+time.sleep(10)
 
 properties = juju_get_properties(main_service_name)
 log.info("Properties = %s", properties)
 log.info("slow-query-time = %s", properties['slow-query-time'])
-assert '0.1' == properties['slow-query-time']['value']
+assert '0.1' == str(properties['slow-query-time']['value'])
