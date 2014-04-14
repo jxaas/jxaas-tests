@@ -39,6 +39,16 @@ def juju_deploy_service(charm, name, repository=None):
   
   return _run_command(args)
 
+def juju_set_property(service, name, value):
+  log.info("Setting property on service %s: %s=%s", service, name, value)
+  args = ['juju', 'set', service, '%s=%s' % (name, value)]
+  return _run_command(args)
+
+def juju_get_properties(service):
+  args = ['juju', 'get', service]
+  out, _ = _run_command(args)
+  return yaml.load(out)['settings']
+
 def juju_add_relation(l, r):
   log.info("Add relation: %s %s", l, r)
   args = ['juju', 'add-relation', l, r]

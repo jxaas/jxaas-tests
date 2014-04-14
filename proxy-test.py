@@ -36,9 +36,9 @@ consumer_service_name = 'it-consumer-' + service_name
 service_state = wait_service_started(service_name)
 log.info("Proxy charm, all units started: %s", service_state)
 
-main_service = 'u%s-%s-%s-%s' % (tenant, service_type, service_name, service_type)
+main_service_name = 'u%s-%s-%s-%s' % (tenant, service_type, service_name, service_type)
 
-main_service_state = wait_service_started(main_service)
+main_service_state = wait_service_started(main_service_name)
 log.info("Main XaaS service started: %s", main_service_state)
 
 jxaas = jujuxaas.client.Client(url='http://10.0.3.1:8080/xaas', username='', password='')
@@ -63,4 +63,27 @@ cur.close()
 
 assert 'interwiki' in tables
 
-    
+
+
+logs = jxaas.get_log(tenant, service_type, service_name)
+assert len(logs) > 0
+
+# TODO: Verify a line from the log
+# TODO: Verify that there are no lines from other services in the log
+
+metrics = jxaas.get_metrics(tenant, service_type, service_name)
+assert len(metrics) > 0
+
+# TODO: Verify some metrics from the log
+# TODO: Verify there are no other metrics in the log
+
+
+log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
+juju_set_property(service_name, 'slow-query-time', '0.1')
+
+time.sleep(1)
+
+properties = juju_get_properties(main_service_name)
+log.info("Properties = %s", properties)
+log.info("slow-query-time = %s", properties['slow-query-time'])
+assert '0.1' == properties['slow-query-time']['value']
