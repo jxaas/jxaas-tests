@@ -1,13 +1,3 @@
-repository = '/home/justinsb/juju/charms'
-# service_name = 'it%s' % (int(time.time()))
-service_name = 'it1397486022'
-tenant = '405ad90bb19248af844071269cb5899c'
-service_type = 'mysql'
-
-consumer_charm = 'mediawiki'
-
-relation = 'db'
-
 import os
 import json
 import subprocess
@@ -23,31 +13,56 @@ log = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 
+
+if len(sys.argv) > 1:
+  prefix = sys.argv[1]
+else:
+  prefix = 'it%s' % (int(time.time()))
+
+repository = '/home/justinsb/juju/charms'
+# service_name = 'it%s' % (int(time.time()))
+service_name = prefix + '-proxy'
+tenant = '2c1f1c9f92d7481a8015fd6b53fb2f26'
+bundle_type = 'mysql'
+
+consumer_charm = 'mediawiki'
+
+relation = 'db'
+
+jxaas = jujuxaas.client.Client(url='http://127.0.0.1:8080/xaas', username='', password='')
+
 status = juju_status()
 print status['services'].keys()
 
-# juju_deploy_service('local:precise/mysql-proxy', service_name, repository)
+if not get_service_state(service_name):
+  juju_deploy_service('local:precise/mysql-proxy', service_name, repository)
 
-consumer_service_name = 'it-consumer-' + service_name
-#juju_deploy_service(consumer_charm, consumer_service_name, repository)
+#time.sleep(120)
 
-#juju_add_relation('%s:%s' % (service_name, relation), '%s:%s' % (consumer_service_name, relation))
+consumer_service_name = prefix + '-consumer'
+if not get_service_state(consumer_service_name):
+  juju_deploy_service(consumer_charm, consumer_service_name, repository)
+
+juju_ensure_relation('%s:%s' % (service_name, relation), '%s:%s' % (consumer_service_name, relation))
 
 service_state = wait_service_started(service_name)
 log.info("Proxy charm, all units started: %s", service_state)
 
-main_service_name = 'u%s-%s-%s-%s' % (tenant, service_type, service_name, service_type)
+wait_jxaas_started(jxaas, tenant, bundle_type, service_name)
+
+main_service_name = 'u%s-%s-%s-%s' % (tenant, bundle_type, service_name, bundle_type)
 
 main_service_state = wait_service_started(main_service_name)
 log.info("Main XaaS service started: %s", main_service_state)
 
-jxaas = jujuxaas.client.Client(url='http://10.0.3.1:8080/xaas', username='', password='')
-properties = jxaas.get_relation_properties(tenant, service_type, service_name, relation)
+properties = jxaas.get_relation_properties(tenant, bundle_type, service_name, relation)
 properties = properties['Properties']
 log.info("JXaaS relation properties: %s", properties)
 
 consumer_service_state = wait_service_started(consumer_service_name)
 log.info("Consumer charm, all units started: %s", consumer_service_state)
+
+# TODO: Need sleep for consumer charm to finish configuration?
 
 import MySQLdb
 
@@ -64,14 +79,13 @@ cur.close()
 assert 'interwiki' in tables
 
 
-
-logs = jxaas.get_log(tenant, service_type, service_name)
+logs = jxaas.get_log(tenant, bundle_type, service_name)
 assert len(logs) > 0
 
 # TODO: Verify a line from the log
 # TODO: Verify that there are no lines from other services in the log
 
-metrics = jxaas.get_metrics(tenant, service_type, service_name)
+metrics = jxaas.get_metrics(tenant, bundle_type, service_name)
 assert len(metrics) > 0
 
 # TODO: Verify some metrics from the log
@@ -87,3 +101,13 @@ properties = juju_get_properties(main_service_name)
 log.info("Properties = %s", properties)
 log.info("slow-query-time = %s", properties['slow-query-time'])
 assert '0.1' == str(properties['slow-query-time']['value'])
+
+
+jxaas.destroy_instance(tenant, bundle_type, service_name)
+
+# TODO: Wait for service to disappear
+
+# TODO: Really, destroying the service should do this...
+juju_destroy_service(service_name)
+
+juju_destroy_service(consumer_service_name)

@@ -39,6 +39,11 @@ def juju_deploy_service(charm, name, repository=None):
   
   return _run_command(args)
 
+def juju_destroy_service(name):
+  log.info("Destroying service: %s", name)
+  args = ['juju', 'destroy-service', name]
+  return _run_command(args)
+
 def juju_set_property(service, name, value):
   log.info("Setting property on service %s: %s=%s", service, name, value)
   args = ['juju', 'set', service, '%s=%s' % (name, value)]
@@ -54,6 +59,14 @@ def juju_add_relation(l, r):
   args = ['juju', 'add-relation', l, r]
   
   return _run_command(args)
+
+def juju_ensure_relation(l, r):
+  log.info("Ensure relation: %s %s", l, r)
+  args = ['juju', 'add-relation', l, r]
+  _,stderr = _run_command(args, exit_codes=[0,1])
+  if stderr:
+    if not 'relation already exists' in stderr:
+      raise Exception("Error adding relation: %s" % stderr)
 
 def get_service_state(service_name):
   status = juju_status()
@@ -80,4 +93,25 @@ def wait_service_started(service_name):
       if all(v == 'started' for v in unit_states.itervalues()):
         return service_state
     time.sleep(5)
-  
+
+
+def get_jxaas_unit_states(service_state):
+  states = {}
+  units = service_state.get('Units')
+  for key, unit in units.iteritems():
+    unit_state = unit.get('Status')
+    log.debug("Unit state: %s => %s", key, unit)
+    states[key] = unit_state
+  return states
+
+def wait_jxaas_started(client, tenant, bundle_type, service_name):
+  # TODO: Timeout
+  while True:
+    service_state = client.get_instance_state(tenant, bundle_type, service_name)
+    if service_state:
+      log.debug("Service state for %s => %s", service_name, service_state)
+      unit_states = get_jxaas_unit_states(service_state)
+      assert len(unit_states) != 0
+      if all(v == 'started' for v in unit_states.itervalues()):
+        return service_state
+    time.sleep(5)
