@@ -36,7 +36,7 @@ def juju_deploy_service(charm, name, repository=None):
   if repository:
     args = args + ['--repository=' + repository]
   args = args + [charm, name]
-  
+
   return _run_command(args)
 
 def juju_destroy_service(name):
@@ -57,13 +57,13 @@ def juju_get_properties(service):
 def juju_add_relation(l, r):
   log.info("Add relation: %s %s", l, r)
   args = ['juju', 'add-relation', l, r]
-  
+
   return _run_command(args)
 
 def juju_ensure_relation(l, r):
   log.info("Ensure relation: %s %s", l, r)
   args = ['juju', 'add-relation', l, r]
-  _,stderr = _run_command(args, exit_codes=[0,1])
+  _, stderr = _run_command(args, exit_codes=[0, 1])
   if stderr:
     if not 'relation already exists' in stderr:
       raise Exception("Error adding relation: %s" % stderr)
@@ -82,19 +82,6 @@ def get_unit_states(service_state):
     states[key] = agent_state
   return states
 
-def wait_service_started(service_name):
-  # TODO: Timeout
-  while True:
-    service_state = get_service_state(service_name)
-    if service_state:
-      log.debug("Service state for %s => %s", service_name, service_state)
-      unit_states = get_unit_states(service_state)
-      assert len(unit_states) != 0
-      if all(v == 'started' for v in unit_states.itervalues()):
-        return service_state
-    time.sleep(5)
-
-
 def get_jxaas_unit_states(service_state):
   states = {}
   units = service_state.get('Units')
@@ -104,9 +91,17 @@ def get_jxaas_unit_states(service_state):
     states[key] = unit_state
   return states
 
-def wait_jxaas_started(client, tenant, bundle_type, service_name):
+
+def wait_for(fn):
   # TODO: Timeout
   while True:
+    done = fn()
+    if done:
+      return done
+    time.sleep(5)
+
+def wait_jxaas_started(client, tenant, bundle_type, service_name):
+  def jxaas_started():
     service_state = client.get_instance_state(tenant, bundle_type, service_name)
     if service_state:
       log.debug("Service state for %s => %s", service_name, service_state)
@@ -114,4 +109,22 @@ def wait_jxaas_started(client, tenant, bundle_type, service_name):
       assert len(unit_states) != 0
       if all(v == 'started' for v in unit_states.itervalues()):
         return service_state
-    time.sleep(5)
+    return None
+
+  return wait_for(jxaas_started)
+
+def wait_service_started(service_name):
+  def service_started():
+    service_state = get_service_state(service_name)
+    if service_state:
+      log.debug("Service state for %s => %s", service_name, service_state)
+      unit_states = get_unit_states(service_state)
+      assert len(unit_states) != 0
+      if all(v == 'started' for v in unit_states.itervalues()):
+        return service_state
+
+    return None
+
+  return wait_for(service_started)
+
+

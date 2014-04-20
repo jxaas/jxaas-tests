@@ -1,3 +1,4 @@
+import functools
 import os
 import json
 import subprocess
@@ -22,10 +23,11 @@ else:
 repository = '/home/justinsb/juju/charms'
 # service_name = 'it%s' % (int(time.time()))
 service_name = prefix + '-proxy'
-tenant = '2c1f1c9f92d7481a8015fd6b53fb2f26'
+tenant = 'a4792a88fb9d4ec2898c596c4c428ad1'
 bundle_type = 'mysql'
 
-consumer_charm = 'mediawiki'
+proxy_charm = 'cs:~justin-fathomdb/trusty/mysql-proxy'
+consumer_charm = 'cs:~justin-fathomdb/trusty/mediawiki'
 
 relation = 'db'
 
@@ -35,9 +37,9 @@ status = juju_status()
 print status['services'].keys()
 
 if not get_service_state(service_name):
-  juju_deploy_service('local:precise/mysql-proxy', service_name, repository)
+  juju_deploy_service(proxy_charm, service_name, repository)
 
-#time.sleep(120)
+# time.sleep(120)
 
 consumer_service_name = prefix + '-consumer'
 if not get_service_state(consumer_service_name):
@@ -55,29 +57,44 @@ main_service_name = 'u%s-%s-%s-%s' % (tenant, bundle_type, service_name, bundle_
 main_service_state = wait_service_started(main_service_name)
 log.info("Main XaaS service started: %s", main_service_state)
 
-properties = jxaas.get_relation_properties(tenant, bundle_type, service_name, relation)
-properties = properties['Properties']
-log.info("JXaaS relation properties: %s", properties)
+relinfo = jxaas.get_relation_properties(tenant, bundle_type, service_name, relation)
+relinfo = relinfo['Properties']
+log.info("JXaaS relation properties: %s", relinfo)
 
 consumer_service_state = wait_service_started(consumer_service_name)
 log.info("Consumer charm, all units started: %s", consumer_service_state)
 
-# TODO: Need sleep for consumer charm to finish configuration?
 
 import MySQLdb
 
-db = MySQLdb.connect(host=properties.get('host'),
-                     user=properties.get('user'),
-                     passwd=properties.get('password'),
-                     db=properties.get('database'))
 
-cur = db.cursor() 
-cur.execute("SHOW TABLES")
-tables = [row[0] for row in cur.fetchall()]
-cur.close()
+def mysql_connect(relinfo):
+  db = MySQLdb.connect(host=relinfo.get('host'),
+                       user=relinfo.get('user'),
+                       passwd=relinfo.get('password'),
+                       db=relinfo.get('database'))
+  return db
 
-assert 'interwiki' in tables
+def execute_sql(db, sql):
+  cur = db.cursor()
+  cur.execute(sql)
+  rows = cur.fetchall()
+  cur.close()
+  return rows
 
+
+def check_for_wiki_tables(relinfo):
+  db = mysql_connect(relinfo)
+  rows = execute_sql(db, 'SHOW TABLES')
+  tables = [row[0] for row in rows]
+
+  if 'interwiki' in tables:
+    return tables
+
+  return None
+
+# Wait for consumer charm to finish configuration
+wait_for(functools.partial(check_for_wiki_tables, relinfo))
 
 logs = jxaas.get_log(tenant, bundle_type, service_name)
 assert len(logs) > 0
@@ -91,16 +108,23 @@ assert len(metrics) > 0
 # TODO: Verify some metrics from the log
 # TODO: Verify there are no other metrics in the log
 
-
-log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
-juju_set_property(service_name, 'slow-query-time', '0.1')
-
-time.sleep(10)
-
 properties = juju_get_properties(main_service_name)
-log.info("Properties = %s", properties)
-log.info("slow-query-time = %s", properties['slow-query-time'])
-assert '0.1' == str(properties['slow-query-time']['value'])
+if str(properties['slow-query-time']['value']) != '0.01':
+  log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
+  juju_set_property(service_name, 'slow-query-time', '0.01')
+
+  time.sleep(10)
+
+  properties = juju_get_properties(main_service_name)
+  log.info("Properties = %s", properties)
+  log.info("slow-query-time = %s", properties['slow-query-time'])
+  assert '0.01' == str(properties['slow-query-time']['value'])
+
+# TODO: Scaling doesn't make sense with the current MySQL charm
+# TODO: Should we use MySQL-Proxy as a charm on the server side?
+# jxaas.ensure_instance(tenant, bundle_type, service_name, units=2)
+
+
 
 
 jxaas.destroy_instance(tenant, bundle_type, service_name)
