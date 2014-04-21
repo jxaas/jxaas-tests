@@ -103,11 +103,6 @@ assert len(logs) > 0
 # TODO: Verify a line from the log
 # TODO: Verify that there are no lines from other services in the log
 
-metrics = jxaas.get_metrics(tenant, bundle_type, service_name)
-assert len(metrics) > 0
-
-# TODO: Verify some metrics from the log
-# TODO: Verify there are no other metrics in the log
 
 properties = juju_get_properties(main_service_name)
 if str(properties['slow-query-time']['value']) != '0.01':
@@ -125,8 +120,31 @@ if str(properties['slow-query-time']['value']) != '0.01':
 # TODO: Should we use MySQL-Proxy as a charm on the server side?
 # jxaas.ensure_instance(tenant, bundle_type, service_name, units=2)
 
+def run_test1(relinfo):
+  db = mysql_connect(relinfo)
+  execute_sql(db, 'CREATE TABLE IF NOT EXISTS test1 (id int)')
 
+  execute_sql(db, 'DELETE FROM test1')
+  for i in xrange(10):
+    execute_sql(db, 'INSERT INTO test1 VALUES (1)')
 
+  for i in xrange(12):
+    execute_sql(db, 'INSERT INTO test1 SELECT * FROM test1')
+
+  rows = execute_sql(db, 'SELECT * FROM test1')
+  log.info("Rows %s", len(rows))
+  assert len(rows) > 40000
+
+run_test1(relinfo)
+
+metrics = jxaas.get_metrics(tenant, bundle_type, service_name)
+metrics = metrics['Metric']
+print "Metrics length %s" % (len(metrics))
+assert len(metrics) > 0
+
+print metrics
+# TODO: Verify some metrics from the log
+# TODO: Verify there are no other metrics in the log
 
 jxaas.destroy_instance(tenant, bundle_type, service_name)
 
