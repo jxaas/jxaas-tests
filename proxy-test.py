@@ -76,6 +76,7 @@ def mysql_connect(relinfo):
   return db
 
 def execute_sql(db, sql):
+  log.info("Running SQL: %s", sql)
   cur = db.cursor()
   cur.execute(sql)
   rows = cur.fetchall()
