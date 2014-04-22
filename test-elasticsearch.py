@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 
-
 if len(sys.argv) > 1:
   prefix = sys.argv[1]
 else:
@@ -23,20 +22,18 @@ else:
 repository = '/home/justinsb/juju/charms'
 # service_name = 'it%s' % (int(time.time()))
 service_name = prefix + '-proxy'
-tenant = 'a4792a88fb9d4ec2898c596c4c428ad1'
-bundle_type = 'mysql'
+bundle_type = 'es'
 
-proxy_charm = 'cs:~justin-fathomdb/trusty/mysql-proxy'
-consumer_charm = 'cs:~justin-fathomdb/trusty/mediawiki'
+proxy_charm = 'cs:~justin-fathomdb/trusty/elasticsearch-proxy'
+consumer_charm = 'cs:~justin-fathomdb/trusty/kibana'
+relation = 'rest'
 
-relation = 'db'
-
-jxaas_url = 'http://10.0.3.1/xaas'
+jxaas_url = 'http://10.0.3.1:8080/xaas'
 jxaas_tenant = 'abcdef'
 jxaas_username = 'abcdef'
 jxaas_password = 'abcdef'
 
-jxaas = jujuxaas.client.Client(url=url, tenant=jxaas_tenant, username=jxaas_username, password=jxaas_password)
+jxaas = jujuxaas.client.Client(url=jxaas_url, tenant=jxaas_tenant, username=jxaas_username, password=jxaas_password)
 
 status = juju_status()
 print status['services'].keys()
@@ -62,7 +59,7 @@ log.info("Proxy charm, all units started: %s", service_state)
 
 wait_jxaas_started(jxaas, bundle_type, service_name)
 
-main_service_name = 'u%s-%s-%s-%s' % (tenant, bundle_type, service_name, bundle_type)
+main_service_name = 'u%s-%s-%s-%s' % (jxaas_tenant, bundle_type, service_name, bundle_type)
 
 main_service_state = wait_service_started(main_service_name)
 log.info("Main XaaS service started: %s", main_service_state)
@@ -75,37 +72,37 @@ consumer_service_state = wait_service_started(consumer_service_name)
 log.info("Consumer charm, all units started: %s", consumer_service_state)
 
 
-import MySQLdb
-
-
-def mysql_connect(relinfo):
-  db = MySQLdb.connect(host=relinfo.get('host'),
-                       user=relinfo.get('user'),
-                       passwd=relinfo.get('password'),
-                       db=relinfo.get('database'))
-  return db
-
-def execute_sql(db, sql):
-  log.info("Running SQL: %s", sql)
-  cur = db.cursor()
-  cur.execute(sql)
-  rows = cur.fetchall()
-  cur.close()
-  return rows
-
-
-def check_for_wiki_tables(relinfo):
-  db = mysql_connect(relinfo)
-  rows = execute_sql(db, 'SHOW TABLES')
-  tables = [row[0] for row in rows]
-
-  if 'interwiki' in tables:
-    return tables
-
-  return None
-
-# Wait for consumer charm to finish configuration
-wait_for(functools.partial(check_for_wiki_tables, relinfo))
+# import MySQLdb
+# 
+# 
+# def mysql_connect(relinfo):
+#   db = MySQLdb.connect(host=relinfo.get('host'),
+#                        user=relinfo.get('user'),
+#                        passwd=relinfo.get('password'),
+#                        db=relinfo.get('database'))
+#   return db
+# 
+# def execute_sql(db, sql):
+#   log.info("Running SQL: %s", sql)
+#   cur = db.cursor()
+#   cur.execute(sql)
+#   rows = cur.fetchall()
+#   cur.close()
+#   return rows
+# 
+# 
+# def check_for_wiki_tables(relinfo):
+#   db = mysql_connect(relinfo)
+#   rows = execute_sql(db, 'SHOW TABLES')
+#   tables = [row[0] for row in rows]
+# 
+#   if 'interwiki' in tables:
+#     return tables
+# 
+#   return None
+# 
+# # Wait for consumer charm to finish configuration
+# wait_for(functools.partial(check_for_wiki_tables, relinfo))
 
 logs = jxaas.get_log(bundle_type, service_name)
 assert len(logs) > 0
@@ -114,38 +111,38 @@ assert len(logs) > 0
 # TODO: Verify that there are no lines from other services in the log
 
 
-properties = juju_get_properties(main_service_name)
-if str(properties['slow-query-time']['value']) != '0.01':
-  log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
-  juju_set_property(service_name, 'slow-query-time', '0.01')
-
-  time.sleep(10)
-
-  properties = juju_get_properties(main_service_name)
-  log.info("Properties = %s", properties)
-  log.info("slow-query-time = %s", properties['slow-query-time'])
-  assert '0.01' == str(properties['slow-query-time']['value'])
+# properties = juju_get_properties(main_service_name)
+# if str(properties['slow-query-time']['value']) != '0.01':
+#   log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
+#   juju_set_property(service_name, 'slow-query-time', '0.01')
+# 
+#   time.sleep(10)
+# 
+#   properties = juju_get_properties(main_service_name)
+#   log.info("Properties = %s", properties)
+#   log.info("slow-query-time = %s", properties['slow-query-time'])
+#   assert '0.01' == str(properties['slow-query-time']['value'])
 
 # TODO: Scaling doesn't make sense with the current MySQL charm
 # TODO: Should we use MySQL-Proxy as a charm on the server side?
 # jxaas.ensure_instance(tenant, bundle_type, service_name, units=2)
 
-def run_test1(relinfo):
-  db = mysql_connect(relinfo)
-  execute_sql(db, 'CREATE TABLE IF NOT EXISTS test1 (id int)')
-
-  execute_sql(db, 'DELETE FROM test1')
-  for i in xrange(10):
-    execute_sql(db, 'INSERT INTO test1 VALUES (1)')
-
-  for i in xrange(12):
-    execute_sql(db, 'INSERT INTO test1 SELECT * FROM test1')
-
-  rows = execute_sql(db, 'SELECT * FROM test1')
-  log.info("Rows %s", len(rows))
-  assert len(rows) > 40000
-
-run_test1(relinfo)
+# def run_test1(relinfo):
+#   db = mysql_connect(relinfo)
+#   execute_sql(db, 'CREATE TABLE IF NOT EXISTS test1 (id int)')
+# 
+#   execute_sql(db, 'DELETE FROM test1')
+#   for i in xrange(10):
+#     execute_sql(db, 'INSERT INTO test1 VALUES (1)')
+# 
+#   for i in xrange(12):
+#     execute_sql(db, 'INSERT INTO test1 SELECT * FROM test1')
+# 
+#   rows = execute_sql(db, 'SELECT * FROM test1')
+#   log.info("Rows %s", len(rows))
+#   assert len(rows) > 40000
+# 
+# run_test1(relinfo)
 
 metrics = jxaas.get_metrics(bundle_type, service_name)
 metrics = metrics['Metric']

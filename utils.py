@@ -2,6 +2,7 @@ import os
 import json
 import subprocess
 import sys
+import tempfile
 import time
 import yaml
 
@@ -30,14 +31,29 @@ def juju_status():
   stdout, _ = _run_command(['juju', 'status'])
   return yaml.load(stdout)
 
-def juju_deploy_service(charm, name, repository=None):
+def juju_deploy_service(charm, name, repository=None, config=None):
   log.info("Deploying service: %s %s", charm, name)
+  config_file = None
+  if config:
+    fd, config_file = tempfile.mkstemp()
+    mapped = {}
+    mapped[name] = config
+    y = yaml.dump(mapped)
+    os.write(fd, y)
+    os.close(fd)
   args = ['juju', 'deploy']
   if repository:
     args = args + ['--repository=' + repository]
+  if config_file:
+    args = args + ['--config', config_file]
   args = args + [charm, name]
 
-  return _run_command(args)
+  out, err = _run_command(args)
+
+  if config_file:
+    os.remove(config_file)
+
+  return out, err
 
 def juju_destroy_service(name):
   log.info("Destroying service: %s", name)
@@ -100,9 +116,9 @@ def wait_for(fn):
       return done
     time.sleep(5)
 
-def wait_jxaas_started(client, tenant, bundle_type, service_name):
+def wait_jxaas_started(client, bundle_type, service_name):
   def jxaas_started():
-    service_state = client.get_instance_state(tenant, bundle_type, service_name)
+    service_state = client.get_instance_state(bundle_type, service_name)
     if service_state:
       log.debug("Service state for %s => %s", service_name, service_state)
       unit_states = get_jxaas_unit_states(service_state)
