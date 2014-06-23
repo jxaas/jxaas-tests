@@ -26,6 +26,7 @@ class TestBase(object):
     # self.repository = '/home/justinsb/juju/charms'
     # proxy_service_name = 'it%s' % (int(time.time()))
     self.proxy_service_name = prefix + '-proxy'
+    self.jxaas_instance_name = self.proxy_service_name
     self.consumer_service_name = prefix + '-consumer'
 
     self.jxaas_url = 'http://10.0.3.1:8080/xaas'
@@ -38,9 +39,11 @@ class TestBase(object):
                                         username=self.jxaas_username,
                                         password=self.jxaas_password)
 
+    self.metric_key = 'Load1Min'
+
 
   def init(self):
-    backend_main_service_name = 'u%s-%s-%s-%s' % (self.jxaas_tenant, self.bundle_type, self.proxy_service_name, self.bundle_type)
+    backend_main_service_name = 'u%s-%s-%s-%s' % (self.jxaas_tenant, self.bundle_type, self.jxaas_instance_name, self.bundle_type)
     self.backend_main_service_name = backend_main_service_name
 
   def run_test(self):
@@ -76,7 +79,7 @@ class TestBase(object):
     #    log.info("Main XaaS service started: %s", main_service_state)
 
   def get_relation_properties(self):
-    relinfo = self.jxaas.get_relation_properties(self.bundle_type, self.proxy_service_name, self.juju_interface)
+    relinfo = self.jxaas.get_relation_properties(self.bundle_type, self.jxaas_instance_name, self.juju_interface)
     relinfo = relinfo['Properties']
     log.info("JXaaS relation properties: %s", relinfo)
 
@@ -117,28 +120,33 @@ class TestBase(object):
     log.warn("test_scaling not implemented")
 
   def check_log(self):
-    logs = self.jxaas.get_log(self.bundle_type, self.proxy_service_name)
+    logs = self.jxaas.get_log(self.bundle_type, self.jxaas_instance_name)
     assert len(logs) > 0
 
     # TODO: Verify a line from the log
     # TODO: Verify that there are no lines from other services in the log
 
   def check_metrics(self):
-    metrics = self.jxaas.get_metrics(self.bundle_type, self.proxy_service_name)
+    metrics = self.jxaas.get_metrics(self.bundle_type, self.jxaas_instance_name)
     metrics = metrics['Metric']
     print "Metrics length %s" % (len(metrics))
     assert len(metrics) > 0
 
     print metrics
+    assert self.metric_key in metrics
     # TODO: Verify some metrics from the log
     # TODO: Verify there are no other metrics in the log
 
+    values = self.jxaas.get_metric_values(self.bundle_type, self.jxaas_instance_name, self.metric_key)
+    print values
+    assert len(values) > 0
+
   def cleanup(self):
-    self.jxaas.destroy_instance(self.bundle_type, self.proxy_service_name)
+    self.jxaas.destroy_instance(self.bundle_type, self.jxaas_instance_name)
 
     # TODO: Wait for service to disappear
 
     # TODO: Really, destroying the service should do this...
-    juju_destroy_service(self.proxy_service_name)
+    juju_destroy_service(self.jxaas_instance_name)
 
     juju_destroy_service(self.consumer_service_name)
