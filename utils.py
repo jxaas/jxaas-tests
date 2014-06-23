@@ -55,6 +55,11 @@ def juju_deploy_service(charm, name, repository=None, config=None):
 
   return out, err
 
+def juju_ssh(instance, unit, command):
+  log.info("Running ssh command: '%s' on %s/%s", ' '.join(command), instance, unit)
+  args = ['juju', 'ssh', instance + '/' + unit] + command
+  return _run_command(args)
+
 def juju_destroy_service(name):
   log.info("Destroying service: %s", name)
   args = ['juju', 'destroy-service', name]

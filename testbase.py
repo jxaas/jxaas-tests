@@ -65,9 +65,30 @@ class TestBase(object):
 
     self.check_metrics()
 
+    self.inject_fault()
+    self.wait_for_recovery()
+
     self.cleanup()
 
     print "Test: SUCCESS"
+
+  def inject_fault(self):
+    pass
+
+  def check_service_state_proxy(self):
+    raise Exception("Must implement check_service_state_proxy")
+
+  def wait_for_recovery(self):
+    log.info("Waiting for service recovery")
+    for i in xrange(120):
+      try:
+        self.check_service_state_proxy()
+        log.info("Service recovered")
+        return
+      except Exception as e:
+        log.warn("Ignoring error waiting for recovery: %s", e)
+      time.sleep(1)
+    raise Exception("Service did not recover in time")
 
   def wait_proxy_started(self):
     service_state = wait_service_started(self.proxy_service_name)

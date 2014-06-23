@@ -43,6 +43,11 @@ class TestMysql(testbase.TestBase):
   def create_consumer_relation(self):
     juju_ensure_relation('%s:db' % self.proxy_service_name, '%s:db' % self.consumer_service_name)
 
+  def check_service_state_proxy(self):
+    relinfo = self.get_relation_properties()
+    db = self.mysql_connect(relinfo)
+    self.execute_sql(db, 'SHOW TABLES')
+
   def check_for_wiki_tables(self, relinfo):
     db = self.mysql_connect(relinfo)
     rows = self.execute_sql(db, 'SHOW TABLES')
@@ -52,6 +57,10 @@ class TestMysql(testbase.TestBase):
       return tables
 
     return None
+
+  def inject_fault(self):
+    juju_ssh(self.backend_main_service_name, '0', ['sudo', 'service', 'mysql', 'stop'])
+    time.sleep(5)
 
   def check_service_state_consumer(self):
     relinfo = self.get_relation_properties()
