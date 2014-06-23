@@ -13,7 +13,7 @@ class TestMongodb(testbase.TestBase):
     self.juju_interface = 'mongodb'
 
   def create_consumer_relation(self):
-    utils.juju_ensure_relation('%s:database' % self.service_name, '%s' % self.consumer_service_name)
+    utils.juju_ensure_relation('%s:database' % self.proxy_service_name, '%s' % self.consumer_service_name)
 
 t = TestMongodb()
 t.run_test()

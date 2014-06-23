@@ -26,6 +26,7 @@ class TestMysql(testbase.TestBase):
 
   def mysql_connect(self, relinfo):
     db = MySQLdb.connect(host=relinfo.get('host'),
+                         port=int(relinfo.get('port')),
                          user=relinfo.get('user'),
                          passwd=relinfo.get('password'),
                          db=relinfo.get('database'))
@@ -40,7 +41,7 @@ class TestMysql(testbase.TestBase):
     return rows
 
   def create_consumer_relation(self):
-    juju_ensure_relation('%s:db' % self.service_name, '%s:db' % self.consumer_service_name)
+    juju_ensure_relation('%s:db' % self.proxy_service_name, '%s:db' % self.consumer_service_name)
 
   def check_for_wiki_tables(self, relinfo):
     db = self.mysql_connect(relinfo)
@@ -61,16 +62,28 @@ class TestMysql(testbase.TestBase):
 
   def change_properties(self):
     properties = juju_get_properties(self.backend_main_service_name)
-    if str(properties['slow-query-time']['value']) != '0.01':
-      log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
-      juju_set_property(self.service_name, 'slow-query-time', '0.01')
+    newv = 0.01
+    if float(properties['slow-query-time']['value']) == newv:
+      newv = 0.02
 
-      time.sleep(10)
+    log.info("Setting slow-query-time property on proxy charm; should be forwarded to main charm")
+    juju_set_property(self.proxy_service_name, 'slow-query-time', str(newv))
 
-      properties = juju_get_properties(self.backend_main_service_name)
-      log.info("Properties = %s", properties)
-      log.info("slow-query-time = %s", properties['slow-query-time'])
-      assert '0.01' == str(properties['slow-query-time']['value'])
+    time.sleep(10)
+
+    properties = juju_get_properties(self.backend_main_service_name)
+    log.info("Properties = %s", properties)
+    log.info("slow-query-time = %s", properties['slow-query-time'])
+    assert newv == float(properties['slow-query-time']['value'])
+
+    # Needed to avoid the MySQL restart
+    time.sleep(10)
+
+    relinfo = self.get_relation_properties()
+    db = self.mysql_connect(relinfo)
+    rows = self.execute_sql(db, "SHOW VARIABLES LIKE 'long_query_time'")
+    assert len(rows) == 1
+    assert float(rows[0][1]) == newv
 
 # def test_scaling(self):
 # TODO: Scaling doesn't make sense with the current MySQL charm

@@ -13,7 +13,7 @@ class TestElasticsearch(testbase.TestBase):
     self.juju_interface = 'rest'
 
   def create_consumer_relation(self):
-    utils.juju_ensure_relation('%s:rest' % self.service_name, '%s:rest' % self.consumer_service_name)
+    utils.juju_ensure_relation('%s:rest' % self.proxy_service_name, '%s:rest' % self.consumer_service_name)
 
 
 t = TestElasticsearch()

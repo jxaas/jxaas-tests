@@ -15,7 +15,7 @@ class TestPostgresql(testbase.TestBase):
     self.juju_interface = 'pgsql'
 
   def create_consumer_relation(self):
-    utils.juju_ensure_relation('%s:db' % self.service_name, '%s' % self.consumer_service_name)
+    utils.juju_ensure_relation('%s:db' % self.proxy_service_name, '%s' % self.consumer_service_name)
 
   def db_connect(self, relinfo):
     conn_string = "host='%s' dbname='%s' user='%s' password='%s'" % (
