@@ -5,7 +5,10 @@ import subprocess
 import sys
 import time
 import yaml
+
 import jujuxaas.client
+import jujuxaas.auth.direct
+import jujuxaas.auth.openstack
 
 from utils import *
 
@@ -30,14 +33,19 @@ class TestBase(object):
     self.consumer_service_name = prefix + '-consumer'
 
     self.jxaas_url = 'http://10.0.3.1:8080/xaas'
-    self.jxaas_tenant = 'tenant1'
-    self.jxaas_username = 'user1'
-    self.jxaas_password = 'secret1'
+    self.jxaas_tenant = 'admin'
+    self.jxaas_username = 'admin'
+    self.jxaas_password = 'secret'
+    self.jxaas_authmode = 'direct'
 
-    self.jxaas = jujuxaas.client.Client(url=self.jxaas_url,
-                                        tenant=self.jxaas_tenant,
-                                        username=self.jxaas_username,
-                                        password=self.jxaas_password)
+    if self.jxaas_authmode == 'direct':
+      auth = jujuxaas.auth.direct.AuthDirect(url=self.jxaas_url, tenant=self.jxaas_tenant, username=self.jxaas_username, password=self.jxaas_password)
+    elif self.jxaas_authmode == 'openstack':
+      auth = jujuxaas.auth.openstack.AuthOpenstack(url=self.jxaas_url, tenant=tenant, username=self.jxaas_username, password=self.jxaas_password)
+    else:
+      raise Exception("Unknown authentication method specified: %s" % auth)
+
+    self.jxaas = jujuxaas.client.Client(auth)
 
     self.metric_key = 'Load1Min'
 
@@ -120,6 +128,8 @@ class TestBase(object):
       config['jxaas-tenant'] = self.jxaas_tenant
       config['jxaas-user'] = self.jxaas_username
       config['jxaas-secret'] = self.jxaas_password
+      config['jxaas-authmode'] = self.jxaas_authmode
+
       juju_deploy_service(self.proxy_charm, self.proxy_service_name, self.repository, config)
 
       # time.sleep(120)
