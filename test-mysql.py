@@ -17,12 +17,14 @@ import testbase
 import MySQLdb
 
 class TestMysql(testbase.TestBase):
-  def __init__(self):
+  def __init__(self, protocol=None):
     super(TestMysql, self).__init__()
     self.bundle_type = 'mysql'
     self.proxy_charm = 'cs:~justin-fathomdb/trusty/mysql-proxy'
     self.consumer_charm = 'cs:~justin-fathomdb/trusty/mediawiki'
     self.juju_interface = 'mysql'
+    if protocol:
+      self.proxy_properties['protocol'] = protocol
 
   def mysql_connect(self, relinfo):
     db = MySQLdb.connect(host=relinfo.get('host'),
@@ -115,5 +117,5 @@ class TestMysql(testbase.TestBase):
     assert len(rows) > 40000
 
 
-t = TestMysql()
+t = TestMysql(protocol=os.environ.get('TEST_PROTOCOL'))
 t.run_test()

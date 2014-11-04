@@ -32,6 +32,8 @@ class TestBase(object):
     self.jxaas_instance_name = self.proxy_service_name
     self.consumer_service_name = prefix + '-consumer'
 
+    self.proxy_properties = {}
+
     self.jxaas_url = 'http://10.0.3.1:8080/xaas'
     self.jxaas_tenant = 'admin'
     self.jxaas_username = 'admin'
@@ -124,6 +126,8 @@ class TestBase(object):
 
     if not get_service_state(self.proxy_service_name):
       config = {}
+      for k, v in self.proxy_properties.iteritems():
+        config[k] = v
       config['jxaas-url'] = self.jxaas_url
       config['jxaas-tenant'] = self.jxaas_tenant
       config['jxaas-user'] = self.jxaas_username
