@@ -35,12 +35,10 @@ chown proxy:proxy /mnt/var/cache/squid-deb-proxy
 if [[ ! -d /etc/squid-deb-proxy/ ]]; then
   sudo apt-get install --yes squid-deb-proxy
 fi
-cat > /etc/squid-deb-proxy/mirror-dstdomain.acl.d/20-all << EOF
+cat > /etc/squid-deb-proxy/mirror-dstdomain.acl << EOF
 .com
 .net
 .org
 EOF
 
-# Squid restart is pretty messed up
-pkill -KILL squid3
-#/etc/init.d/squid-deb-proxy reload
+/etc/init.d/squid-deb-proxy reload
