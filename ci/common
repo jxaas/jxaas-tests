@@ -1,0 +1,109 @@
+export AWS_DEFAULT_OUTPUT="text"
+
+AMI="ami-9eaa1cf6"
+SSH_USER="ubuntu"
+
+pushd ..
+BASEDIR=`pwd`
+popd
+
+
+
+function get_keypair () {
+  if [[ -z "${KEYPAIR-}" ]]; then
+    KEYPAIR=$(aws ec2 describe-key-pairs --query KeyPairs[0].KeyName)
+    echo "Defaulting to keypair ${KEYPAIR}"
+  fi
+}
+
+
+function get_instancetype () {
+  if [[ -z "${INSTANCETYPE-}" ]]; then
+    INSTANCETYPE="m3.large"
+    echo "Defaulting to instance type ${INSTANCETYPE}"
+  fi
+}
+
+function find_instance() {
+  INSTANCEID=`aws ec2 describe-instances --filters Name=tag:juju-test,Values=1 Name=instance-state-name,Values=pending,running --query Reservations[].Instances.InstanceId`
+}
+
+function get_instance() {
+  find_instance
+
+  if [[ -z "${INSTANCEID-}" ]]; then
+    INSTANCEID=`aws ec2 run-instances --image-id=${AMI} --key-name=${KEYPAIR} --instance-type=${INSTANCETYPE} --query Instances[0].InstanceId`
+    aws ec2 create-tags --resources ${INSTANCEID} --tags Key=juju-test,Value=1
+    aws ec2 create-tags --resources ${INSTANCEID} --tags Key=Name,Value=juju-test
+    echo "Launching EC2 instance: ${INSTANCEID}"
+  fi
+}
+
+function terminate_instance () {
+  local instance_id=$1
+  aws ec2 terminate-instances --instance-id=${instance_id}
+}
+
+function get_state() {
+	local instance_id=$1
+aws ec2 describe-instances --instance-id=${instance_id} --query Reservations[].Instances[].State.Name
+}
+
+function get_publicip() {
+	local instance_id=$1
+aws ec2 describe-instances --instance-id=${instance_id} --query Reservations[].Instances[].PublicIpAddress
+}
+
+function wait_running() {
+  local instance_id=$1
+  local i=0
+  echo "instance_id=${instance_id}"
+  
+
+  while [[ $i -lt 10 ]]; do
+    if [[ $i != 0 ]]; then
+      sleep 10
+    fi
+    state=$(get_state ${instance_id})
+
+    if [[ "${state}" == "running" ]]; then
+      echo "Instance is running"
+      return 0
+    fi
+    
+    echo "Instance not yet running.  Waiting..."
+    let i=i+1
+  done
+
+  echo "Timed out waiting for instance to start; state was ${state}"
+  return 1
+}
+
+function wait_ssh() {
+  local user=$1
+  local ip=$2
+  local i=0
+
+  while [[ $i -lt 20 ]]; do
+    if [[ $i != 0 ]]; then
+      sleep 5
+    fi
+    failed=0
+    uptime=$(ssh ${user}@${ip} uptime) || failed=1
+
+    if [[ "${failed}" == "0" ]]; then
+      echo "SSH is available"
+      return 0
+    fi
+
+    echo "SSH not yet available.  Waiting..."
+    let i=i+1
+  done
+
+  echo "Timed out waiting for SSH to start"
+  return 1
+}
+
+
+
+
