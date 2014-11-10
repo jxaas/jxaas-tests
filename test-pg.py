@@ -7,12 +7,14 @@ import utils
 import psycopg2
 
 class TestPostgresql(testbase.TestBase):
-  def __init__(self):
+  def __init__(self, protocol=None):
     super(TestPostgresql, self).__init__()
     self.bundle_type = 'pg'
     self.proxy_charm = 'cs:~justin-fathomdb/trusty/postgresql-proxy'
     self.consumer_charm = 'cs:~justin-fathomdb/trusty/python-django'
     self.juju_interface = 'pgsql'
+    if protocol:
+      self.proxy_properties['protocol'] = protocol
 
   def create_consumer_relation(self):
     utils.juju_ensure_relation('%s:db' % self.proxy_service_name, '%s' % self.consumer_service_name)
@@ -38,8 +40,12 @@ class TestPostgresql(testbase.TestBase):
 
   def check_service_state_consumer(self):
     relinfo = self.get_relation_properties()
-
     self.run_test_sql(relinfo)
+
+  def check_service_state_proxy(self):
+    relinfo = self.get_relation_properties()
+    db = self.db_connect(relinfo)
+    self.execute_sql(db, 'SELECT 1');
 
   def run_test_sql(self, relinfo):
     db = self.db_connect(relinfo)

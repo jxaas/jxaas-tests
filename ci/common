@@ -36,6 +36,8 @@ function get_instance() {
     aws ec2 create-tags --resources ${INSTANCEID} --tags Key=juju-test,Value=1
     aws ec2 create-tags --resources ${INSTANCEID} --tags Key=Name,Value=juju-test
     echo "Launching EC2 instance: ${INSTANCEID}"
+    local ip=$(get_publicip ${INSTANCEID})
+    ssh-keygen -f "~/.ssh/known_hosts" -R ${ip}
   fi
 }
 
@@ -50,8 +52,8 @@ aws ec2 describe-instances --instance-id=${instance_id} --query Reservations[].I
 }
 
 function get_publicip() {
-	local instance_id=$1
-aws ec2 describe-instances --instance-id=${instance_id} --query Reservations[].Instances[].PublicIpAddress
+  local instance_id=$1
+  aws ec2 describe-instances --instance-id=${instance_id} --query Reservations[].Instances[].PublicIpAddress
 }
 
 function wait_running() {

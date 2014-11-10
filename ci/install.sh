@@ -13,6 +13,7 @@ sudo apt-get install --yes python-pip
 
 # For tests
 sudo apt-get install --yes python-mysqldb
+sudo apt-get install --yes python-psycopg2
 
 #Install LXC
 mkdir -p /mnt/var/lib/lxc
