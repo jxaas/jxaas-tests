@@ -26,7 +26,7 @@ class TestMysql(testbase.TestBase):
     if protocol:
       self.proxy_properties['protocol'] = protocol
 
-  def mysql_connect(self, relinfo):
+  def _db_connect(self, relinfo):
     db = MySQLdb.connect(host=relinfo.get('host'),
                          port=int(relinfo.get('port')),
                          user=relinfo.get('user'),
@@ -34,7 +34,7 @@ class TestMysql(testbase.TestBase):
                          db=relinfo.get('database'))
     return db
 
-  def execute_sql(self, db, sql):
+  def _execute_sql(self, db, sql):
     log.info("Running SQL: %s", sql)
     cur = db.cursor()
     cur.execute(sql)
@@ -47,12 +47,12 @@ class TestMysql(testbase.TestBase):
 
   def check_service_state_proxy(self):
     relinfo = self.get_relation_properties()
-    db = self.mysql_connect(relinfo)
-    self.execute_sql(db, 'SHOW TABLES')
+    db = self._db_connect(relinfo)
+    self._execute_sql(db, 'SHOW TABLES')
 
-  def check_for_wiki_tables(self, relinfo):
-    db = self.mysql_connect(relinfo)
-    rows = self.execute_sql(db, 'SHOW TABLES')
+  def _check_for_wiki_tables(self, relinfo):
+    db = self._db_connect(relinfo)
+    rows = self._execute_sql(db, 'SHOW TABLES')
     tables = [row[0] for row in rows]
 
     if 'interwiki' in tables:
@@ -67,9 +67,9 @@ class TestMysql(testbase.TestBase):
   def check_service_state_consumer(self):
     relinfo = self.get_relation_properties()
     # Wait for consumer charm to finish configuration
-    wait_for(functools.partial(self.check_for_wiki_tables, relinfo))
+    wait_for(functools.partial(self._check_for_wiki_tables, relinfo))
 
-    self.run_test1(relinfo)
+    self._run_test1(relinfo)
 
   def change_properties(self):
     properties = juju_get_properties(self.backend_main_service_name)
@@ -91,8 +91,8 @@ class TestMysql(testbase.TestBase):
     time.sleep(10)
 
     relinfo = self.get_relation_properties()
-    db = self.mysql_connect(relinfo)
-    rows = self.execute_sql(db, "SHOW VARIABLES LIKE 'long_query_time'")
+    db = self._db_connect(relinfo)
+    rows = self._execute_sql(db, "SHOW VARIABLES LIKE 'long_query_time'")
     assert len(rows) == 1
     assert float(rows[0][1]) == newv
 
@@ -101,18 +101,18 @@ class TestMysql(testbase.TestBase):
 # TODO: Should we use MySQL-Proxy as a charm on the server side?
 # jxaas.ensure_instance(tenant, bundle_type, service_name, units=2)
 
-  def run_test1(self, relinfo):
-    db = self.mysql_connect(relinfo)
-    self.execute_sql(db, 'CREATE TABLE IF NOT EXISTS test1 (id int)')
+  def _run_test1(self, relinfo):
+    db = self._db_connect(relinfo)
+    self._execute_sql(db, 'CREATE TABLE IF NOT EXISTS test1 (id int)')
 
-    self.execute_sql(db, 'DELETE FROM test1')
+    self._execute_sql(db, 'DELETE FROM test1')
     for i in xrange(10):
-      self.execute_sql(db, 'INSERT INTO test1 VALUES (1)')
+      self._execute_sql(db, 'INSERT INTO test1 VALUES (1)')
 
     for i in xrange(12):
-      self.execute_sql(db, 'INSERT INTO test1 SELECT * FROM test1')
+      self._execute_sql(db, 'INSERT INTO test1 SELECT * FROM test1')
 
-    rows = self.execute_sql(db, 'SELECT * FROM test1')
+    rows = self._execute_sql(db, 'SELECT * FROM test1')
     log.info("Rows %s", len(rows))
     assert len(rows) > 40000
 
