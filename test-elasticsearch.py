@@ -9,7 +9,7 @@ import elasticsearch
 
 class TestElasticsearch(testbase.TestBase):
   def __init__(self, protocol=None):
-    super(TestElasticsearch, self).__init__('it1415765973')
+    super(TestElasticsearch, self).__init__()
     self.bundle_type = 'es'
     self.proxy_charm = 'cs:~justin-fathomdb/trusty/elasticsearch-proxy'
     self.consumer_charm = 'cs:~justin-fathomdb/trusty/kibana'
