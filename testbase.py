@@ -34,11 +34,11 @@ class TestBase(object):
 
     self.proxy_properties = {}
 
-    self.jxaas_url = 'http://10.0.3.1:8080/xaas'
-    self.jxaas_tenant = 'admin'
-    self.jxaas_username = 'admin'
-    self.jxaas_password = 'secret'
-    self.jxaas_authmode = 'direct'
+    self.jxaas_url = os.getenv('TEST_JXAAS_URL', 'http://10.0.3.1:8080/xaas')
+    self.jxaas_tenant = os.getenv('TEST_JXAAS_TENANT', 'admin')
+    self.jxaas_username = os.getenv('TEST_JXAAS_USER', 'admin')
+    self.jxaas_password = os.getenv('TEST_JXAAS_SECRET', 'secret')
+    self.jxaas_authmode = os.getenv('TEST_JXAAS_AUTH', 'direct')
 
     if self.jxaas_authmode == 'direct':
       auth = jujuxaas.auth.direct.AuthDirect(url=self.jxaas_url, tenant=self.jxaas_tenant, username=self.jxaas_username, password=self.jxaas_password)
