@@ -40,10 +40,13 @@ class TestBase(object):
     self.jxaas_password = os.getenv('TEST_JXAAS_SECRET', 'secret')
     self.jxaas_authmode = os.getenv('TEST_JXAAS_AUTH', 'direct')
 
+    self.tenant_key = self.jxaas_tenant
+
     if self.jxaas_authmode == 'direct':
       auth = jujuxaas.auth.direct.AuthDirect(url=self.jxaas_url, tenant=self.jxaas_tenant, username=self.jxaas_username, password=self.jxaas_password)
     elif self.jxaas_authmode == 'openstack':
-      auth = jujuxaas.auth.openstack.AuthOpenstack(url=self.jxaas_url, tenant=tenant, username=self.jxaas_username, password=self.jxaas_password)
+      auth = jujuxaas.auth.openstack.AuthOpenstack(url=self.jxaas_url, tenant=self.jxaas_tenant, username=self.jxaas_username, password=self.jxaas_password)
+      self.tenant_key = auth.get_tenant_id()
     else:
       raise Exception("Unknown authentication method specified: %s" % auth)
 
@@ -53,7 +56,7 @@ class TestBase(object):
 
 
   def init(self):
-    backend_main_service_name = 'u%s-%s-%s-%s' % (self.jxaas_tenant, self.bundle_type, self.jxaas_instance_name, self.bundle_type)
+    backend_main_service_name = 'u%s-%s-%s-%s' % (self.tenant_key, self.bundle_type, self.jxaas_instance_name, self.bundle_type)
     self.backend_main_service_name = backend_main_service_name
 
   def run_test(self):
