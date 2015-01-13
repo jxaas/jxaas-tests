@@ -3,6 +3,10 @@
 set -e
 set -x
 
+cd ~/jxaas
+curl -L  https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.tar.gz | tar xzvf -
+mv etcd-v2.0.0-rc.1-linux-amd64 etcd
+
 sudo apt-get update
 
 sudo apt-get install --yes golang
