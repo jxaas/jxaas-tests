@@ -1,0 +1,5 @@
+bin/jxaasd -listen=:8079 -auth=${AUTH_FLAG} &
+etcd/etcd &
+bin/jxaas-routerd &
+bin/jxaas-admin set-service-backend mysql 127.0.0.1:8079
+

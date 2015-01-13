@@ -1,0 +1,2 @@
+export TEST_JXAAS_AUTH=direct
+AUTH_FLAG=development

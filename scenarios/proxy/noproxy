@@ -1,0 +1,4 @@
+bin/jxaasd -auth=${AUTH_FLAG} &
+
+
+

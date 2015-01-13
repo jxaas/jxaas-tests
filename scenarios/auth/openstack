@@ -1,0 +1,4 @@
+export TEST_JXAAS_AUTH=openstack
+export TEST_JXAAS_URL=http://10.0.3.1:5000/
+
+AUTH_FLAG=openstack
