@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -e
+set -x
+
+BASEDIR=`dirname $0`
+pushd $BASEDIR > /dev/null
+cd ..
+BASEDIR=`pwd`
+popd
+
+
+if [ "$#" == "0" ]; then
+        echo "Usage: $0 <testname>"
+        exit 1
+fi
+
+TEST=$1
+
+mkdir -p ${BASEDIR}/results/
+
+${BASEDIR}/bin/run_scenario ${TEST} auth/development proxy/noproxy 2>&1 | tee ${BASEDIR}/results/${TEST}_authdev_noproxy
+${BASEDIR}/bin/run_scenario ${TEST} auth/development proxy/proxy 2>&1 | tee ${BASEDIR}/results/${TEST}_authdev_proxy
+
+${BASEDIR}/bin/run_scenario ${TEST} auth/openstack proxy/noproxy 2>&1 | tee ${BASEDIR}/results/${TEST}_authopenstack_noproxy
+${BASEDIR}/bin/run_scenario ${TEST} auth/openstack proxy/proxy 2>&1 | tee ${BASEDIR}/results/${TEST}_authopenstack_proxy
+
+
+

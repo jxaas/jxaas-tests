@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -e
+set -x
+
+trap 'kill $(jobs -p)' EXIT
+
+BASEDIR=`dirname $0`
+pushd $BASEDIR > /dev/null
+cd ..
+BASEDIR=`pwd`
+popd
+
+if [[ "${JXAAS_HOME}" == "" ]]; then
+  JXAAS_HOME=~/jxaas
+fi
+
+cd ${JXAAS_HOME}
+
+if [ "$#" == "0" ]; then
+	echo "Usage: $0 <testname> <scenarios...>"
+	exit 1
+fi
+
+TEST=$1
+shift
+
+while (( "$#" )); do
+  SCENARIO=$1
+  . ${BASEDIR}/scenarios/${SCENARIO}
+
+  shift
+done
+
+${BASEDIR}/${TEST}
+
+
+
+
