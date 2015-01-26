@@ -3,13 +3,13 @@
 set -e
 set -x
 
-if [[ -d ~/jxaas ]]; then
-  cd ~/jxaas
+if [[ -d ~/jxaas/jxaas ]]; then
+  cd ~/jxaas/jxaas
   git pull
 else
-cd ~
+  cd ~
   git clone https://github.com/jxaas/jxaas.git ~/jxaas
-  cd ~/jxaas
+  cd ~/jxaas/jxaas
 fi
 ./build.sh
 

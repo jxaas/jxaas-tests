@@ -1,4 +1,5 @@
+pushd jxaas/.build
 bin/jxaasd -auth=${AUTH_FLAG} &
-
+popd
 
 
