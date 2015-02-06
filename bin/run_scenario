@@ -3,7 +3,7 @@
 set -e
 set -x
 
-trap 'kill $(jobs -p)' EXIT
+trap 'kill $(jobs -p) || true' EXIT
 
 BASEDIR=`dirname $0`
 pushd $BASEDIR > /dev/null
@@ -25,6 +25,15 @@ fi
 TEST=$1
 shift
 
+pkill -KILL jxaasd || true
+pkill etcd || true
+pkill -KILL jxaas-router || true
+
+sudo juju destroy-environment --force -y local
+juju bootstrap
+juju set-env apt-http-proxy=http://10.0.3.1:8000
+juju status
+
 while (( "$#" )); do
   SCENARIO=$1
   . ${BASEDIR}/scenarios/${SCENARIO}
@@ -32,8 +41,12 @@ while (( "$#" )); do
   shift
 done
 
+echo "Waiting 2 minutes for JXaaS to start"
+sleep 120
+
 ${BASEDIR}/${TEST}
 
+sleep 30
 
-
+echo "Success!"
 

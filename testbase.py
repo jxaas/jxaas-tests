@@ -24,7 +24,7 @@ class TestBase(object):
       if len(sys.argv) > 1:
         prefix = sys.argv[1]
       else:
-        prefix = 'it%s' % (int(time.time()))
+        prefix = 'it%s' % (int(time.time()) % 10000)
     self.repository = None
     # self.repository = '/home/justinsb/juju/charms'
     # proxy_service_name = 'it%s' % (int(time.time()))
