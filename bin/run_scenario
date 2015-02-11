@@ -41,12 +41,27 @@ while (( "$#" )); do
   shift
 done
 
-echo "Waiting 2 minutes for JXaaS to start"
-sleep 120
+function wait_for_url() {
+  local url=$1
+  local attempt=0
+  while [[ ${attempt} -ne 20 ]]; do
+    sleep 10
+    ((attempt++)) || true
+    curl -s --max-time 5 --fail ${url} || continue
+    return 0
+  done
+
+  echo "Timed out waiting for url: ${url}"
+  return 1
+}
+
+wait_for_url http://10.0.3.1:8080/cf/mysql/v2/catalog
+
+
 
 ${BASEDIR}/${TEST}
 
 sleep 30
 
-echo "Success!"
+echo "SUCCESS"
 

@@ -4,8 +4,9 @@ popd
 etcd/etcd &
 sleep 5
 jxaas/.build/bin/jxaas-routerd &
+jxaas/.build/bin/jxaas-admin set-service-backend cf 127.0.0.1:8079
 jxaas/.build/bin/jxaas-admin set-service-backend mysql 127.0.0.1:8079
 jxaas/.build/bin/jxaas-admin set-service-backend mongodb 127.0.0.1:8079
-jxaas/.build/bin/jxaas-admin set-service-backend elasticsearch 127.0.0.1:8079
+jxaas/.build/bin/jxaas-admin set-service-backend es 127.0.0.1:8079
 jxaas/.build/bin/jxaas-admin set-service-backend pg 127.0.0.1:8079
 jxaas/.build/bin/jxaas-admin set-service-backend cassandra 127.0.0.1:8079

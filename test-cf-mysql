@@ -15,11 +15,19 @@ pushd apps/spring-music
 cf push spring-music -n spring-music
 popd
 
-if (cf service-brokers | grep jxaas); then
-	echo "JXAAS service-broker already registered"
-else
-	cf create-service-broker jxaas admin admin http://10.0.3.1:8080/cf
-fi
+function teardown() {
+  echo "Cleaning up"
+  cf delete -f spring-music
+  cf delete-service -f mysql1
+  cf delete-service-broker -f jxaas
+
+  # Give the service a bit of time to stop, before we stop jxaas
+  sleep 20
+}
+
+trap "teardown" EXIT
+
+cf create-service-broker jxaas admin admin http://10.0.3.1:8080/cf/mysql
 
 # Should include mysql
 cf service-access | grep mysql
@@ -53,9 +61,4 @@ curl http://spring-music.10.244.0.34.xip.io/albums | grep Nirvana
 
 # Should include 'in-memory', not 'mysql'
 curl http://spring-music.10.244.0.34.xip.io/info | grep memory
-
-cf delete-service -f mysql1
-
-# Give the service a bit of time to stop, before we stop jxaas
-sleep 20
 
