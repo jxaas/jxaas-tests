@@ -19,7 +19,7 @@ function teardown() {
   echo "Cleaning up"
   cf delete -f spring-music
   cf delete-service -f mysql1
-  cf delete-service-broker -f jxaas
+  cf delete-service-broker -f jxaas-mysql
 
   # Give the service a bit of time to stop, before we stop jxaas
   sleep 20
@@ -27,7 +27,7 @@ function teardown() {
 
 trap "teardown" EXIT
 
-cf create-service-broker jxaas admin admin http://10.0.3.1:8080/cf/mysql
+cf create-service-broker jxaas-mysql admin admin http://10.0.3.1:8080/cf/mysql
 
 # Should include mysql
 cf service-access | grep mysql
