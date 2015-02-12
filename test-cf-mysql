@@ -43,7 +43,24 @@ curl http://spring-music.10.244.0.34.xip.io/info | grep memory
 
 cf create-service mysql nano mysql1
 cf services
-cf bind-service spring-music mysql1
+
+
+function cf_bind() {
+  local app=$1
+  local service=$2
+  local attempt=0
+  while [[ ${attempt} -ne 20 ]]; do
+    sleep 10
+    ((attempt++)) || true
+    cf bind-service ${app} ${service} || continue
+    return 0
+  done
+
+  echo "Timed out attempting bind: ${app} => ${service}"
+  return 1
+}
+
+cf_bind spring-music mysql1
 
 cf restage spring-music
 
