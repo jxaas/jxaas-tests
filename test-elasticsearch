@@ -62,11 +62,13 @@ class TestElasticsearch(testbase.TestBase):
     time.sleep(5)
 
   def test_scaling(self):
+    time.sleep(10)
+
     policy = {}
-    policy.ScaleMin = 1
-    policy.ScaleMax = 3
-    policy.MetricMax = 0.01
-    policy.MetricName = "Load1Min"
+    policy['ScaleMin'] = 1
+    policy['ScaleMax'] = 3
+    policy['MetricMax'] = 0.01
+    policy['MetricName'] = "Load1Min"
     self.jxaas.set_scaling(self.bundle_type, self.jxaas_instance_name, policy=policy)
 
     for i in xrange(60):
@@ -75,7 +77,7 @@ class TestElasticsearch(testbase.TestBase):
       current = scaling.get('ScaleCurrent', -1)
       if current > 1:
         break
-      sleep(5)
+      time.sleep(5)
 
 t = TestElasticsearch(protocol=os.environ.get('TEST_PROTOCOL'))
 t.run_test()
