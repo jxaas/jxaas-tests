@@ -98,11 +98,6 @@ class TestMysql(testbase.TestBase):
     assert len(rows) == 1
     assert float(rows[0][1]) == newv
 
-# def test_scaling(self):
-# TODO: Scaling doesn't make sense with the current MySQL charm
-# TODO: Should we use MySQL-Proxy as a charm on the server side?
-# jxaas.ensure_instance(tenant, bundle_type, service_name, units=2)
-
   def _run_test1(self, relinfo):
     db = self._db_connect(relinfo)
     self._execute_sql(db, 'CREATE TABLE IF NOT EXISTS test1 (id int)')

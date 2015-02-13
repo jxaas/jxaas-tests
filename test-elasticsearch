@@ -61,5 +61,21 @@ class TestElasticsearch(testbase.TestBase):
     utils.juju_ssh(self.backend_main_service_name, '0', ['sudo', 'service', 'elasticsearch', 'stop'])
     time.sleep(5)
 
+  def test_scaling(self):
+    policy = {}
+    policy.ScaleMin = 1
+    policy.ScaleMax = 3
+    policy.MetricMax = 0.01
+    policy.MetricName = "Load1Min"
+    self.jxaas.set_scaling(self.bundle_type, self.jxaas_instance_name, policy=policy)
+
+    for i in xrange(60):
+      scaling = self.jxaas.get_scaling(self.bundle_type, self.jxaas_instance_name)
+      print scaling
+      current = scaling.get('ScaleCurrent', -1)
+      if current > 1:
+        break
+      sleep(5)
+
 t = TestElasticsearch(protocol=os.environ.get('TEST_PROTOCOL'))
 t.run_test()
